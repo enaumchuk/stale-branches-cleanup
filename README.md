@@ -75,8 +75,8 @@ jobs:
     steps:
       - name: Stale Branches Cleanup
         uses: enaumchuk/stale-branches-cleanup@main
-		with:
-			dry-run: true
+        with:
+          dry-run: true
 ```
 
 ### Scheduled cleanup
@@ -97,6 +97,6 @@ jobs:
     steps:
       - name: Stale Branches Cleanup
         uses: enaumchuk/stale-branches-cleanup@main
-		with:
-			skip-unmerged: false
+        with:
+          skip-unmerged: false
 ```
