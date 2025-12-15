@@ -210,7 +210,7 @@ try {
 							head: branch.name
 						});
 						if (compare.ahead_by > 0) {
-							core.info(`\t${ANSI_COLOR_YELLOW}Skipping${ANSI_COLOR_RESET} - the branch has unmerged commits (${compare.ahead_by} commits ahead of main)`);
+							core.info(`\t${ANSI_COLOR_YELLOW}Skipping${ANSI_COLOR_RESET} - the branch has unmerged commits (${compare.ahead_by} commits ahead of ${defaultBranch})`);
 							continue;
 						}
 					}

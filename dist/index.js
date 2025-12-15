@@ -32774,7 +32774,7 @@ try {
 							head: branch.name
 						});
 						if (compare.ahead_by > 0) {
-							_actions_core__WEBPACK_IMPORTED_MODULE_0__.info(`\t${ANSI_COLOR_YELLOW}Skipping${ANSI_COLOR_RESET} - the branch has unmerged commits (${compare.ahead_by} commits ahead of main)`);
+							_actions_core__WEBPACK_IMPORTED_MODULE_0__.info(`\t${ANSI_COLOR_YELLOW}Skipping${ANSI_COLOR_RESET} - the branch has unmerged commits (${compare.ahead_by} commits ahead of ${defaultBranch})`);
 							continue;
 						}
 					}
