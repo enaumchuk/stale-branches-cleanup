@@ -21,18 +21,18 @@ async function isSafeToProceedWithApiCalls(octokit, threshold = 100) {
 	}
   }
 
+// Define ANSI color codes (for foreground colors)
+const ANSI_COLOR_RED    = '\x1b[31m';
+const ANSI_COLOR_GREEN  = '\x1b[32m';
+const ANSI_COLOR_YELLOW = '\x1b[33m';
+const ANSI_COLOR_BLUE   = '\x1b[34m';
+const ANSI_COLOR_RESET  = '\x1b[0m'; // CRITICAL: Resets color back to default
+
+// Declare outputs
+const outputDeletedBranches = [];
+let deletedCount = 0;
+
 try {
-	// Define ANSI color codes (for foreground colors)
-	const ANSI_COLOR_RED    = '\x1b[31m';
-	const ANSI_COLOR_GREEN  = '\x1b[32m';
-	const ANSI_COLOR_YELLOW = '\x1b[33m';
-	const ANSI_COLOR_BLUE   = '\x1b[34m';
-	const ANSI_COLOR_RESET  = '\x1b[0m'; // CRITICAL: Resets color back to default
-
-	// Declare outputs
-	const outputDeletedBranches = [];
-	let deletedCount = 0;
-
 	// Get inputs
 	const token = core.getInput('github-token');
 
