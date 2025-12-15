@@ -136,17 +136,19 @@ try {
 		core.info(`Found ${branches.length} branches`);
 		core.info('');
 
+		let processedCount = 0;
+
 		for (const branch of branches) {
 			// Check API rate limit
 			const canProceed = await isSafeToProceedWithApiCalls(octokit, rateLimitThreshold);
 			if (!canProceed) {
-				core.warning(`API rate limit below threshold of ${rateLimitThreshold}. Stopping further processing.`);
+				core.warning(`API rate limit below threshold of ${rateLimitThreshold}. Stopping further processing...`);
 				break;
 			}
 
 			// Stop if max deletions reached
-			if (deletedCount >= maxBranchesToDelete) {
-				core.warning(`Reached maximum branch deletion limit of ${maxBranchesToDelete}. Stopping further processing.`);
+			if (processedCount >= maxBranchesToDelete) {
+				core.warning(`Reached maximum branch deletion limit of ${maxBranchesToDelete}. Stopping further processing...`);
 				break;
 			}
 
@@ -228,7 +230,7 @@ try {
 					}
 
 					if (dryRun) {
-						core.info(`\t${ANSI_COLOR_BLUE}Dry Run${ANSI_COLOR_RESET} - would delete this branch when dry-run=false`);
+						core.info(`\t${ANSI_COLOR_BLUE}Dry Run${ANSI_COLOR_RESET} - would delete this branch when dry-run==false`);
 					} else {
 						await octokit.rest.git.deleteRef({
 							owner: context.repo.owner,
@@ -239,6 +241,7 @@ try {
 						outputDeletedBranches.push(branch.name);
 						deletedCount++;
 					}
+					processedCount++;
 				} else {
 					core.info(`\t${ANSI_COLOR_GREEN}Active branch${ANSI_COLOR_RESET} - the last commit was ${daysSinceCommit} days ago`);
 				}
@@ -250,7 +253,6 @@ try {
 					core.warning(`\t${ANSI_COLOR_RED}Error processing this branch, stopping further processing${ANSI_COLOR_RESET}`);
 					throw error;
 				}
-
 			}
 
 			// Throttle processing if needed

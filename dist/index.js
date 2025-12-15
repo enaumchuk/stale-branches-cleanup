@@ -32700,17 +32700,19 @@ try {
 		_actions_core__WEBPACK_IMPORTED_MODULE_0__.info(`Found ${branches.length} branches`);
 		_actions_core__WEBPACK_IMPORTED_MODULE_0__.info('');
 
+		let processedCount = 0;
+
 		for (const branch of branches) {
 			// Check API rate limit
 			const canProceed = await isSafeToProceedWithApiCalls(octokit, rateLimitThreshold);
 			if (!canProceed) {
-				_actions_core__WEBPACK_IMPORTED_MODULE_0__.warning(`API rate limit below threshold of ${rateLimitThreshold}. Stopping further processing.`);
+				_actions_core__WEBPACK_IMPORTED_MODULE_0__.warning(`API rate limit below threshold of ${rateLimitThreshold}. Stopping further processing...`);
 				break;
 			}
 
 			// Stop if max deletions reached
-			if (deletedCount >= maxBranchesToDelete) {
-				_actions_core__WEBPACK_IMPORTED_MODULE_0__.warning(`Reached maximum branch deletion limit of ${maxBranchesToDelete}. Stopping further processing.`);
+			if (processedCount >= maxBranchesToDelete) {
+				_actions_core__WEBPACK_IMPORTED_MODULE_0__.warning(`Reached maximum branch deletion limit of ${maxBranchesToDelete}. Stopping further processing...`);
 				break;
 			}
 
@@ -32792,7 +32794,7 @@ try {
 					}
 
 					if (dryRun) {
-						_actions_core__WEBPACK_IMPORTED_MODULE_0__.info(`\t${ANSI_COLOR_BLUE}Dry Run${ANSI_COLOR_RESET} - would delete this branch when dry-run=false`);
+						_actions_core__WEBPACK_IMPORTED_MODULE_0__.info(`\t${ANSI_COLOR_BLUE}Dry Run${ANSI_COLOR_RESET} - would delete this branch when dry-run==false`);
 					} else {
 						await octokit.rest.git.deleteRef({
 							owner: context.repo.owner,
@@ -32803,6 +32805,7 @@ try {
 						outputDeletedBranches.push(branch.name);
 						deletedCount++;
 					}
+					processedCount++;
 				} else {
 					_actions_core__WEBPACK_IMPORTED_MODULE_0__.info(`\t${ANSI_COLOR_GREEN}Active branch${ANSI_COLOR_RESET} - the last commit was ${daysSinceCommit} days ago`);
 				}
@@ -32814,7 +32817,6 @@ try {
 					_actions_core__WEBPACK_IMPORTED_MODULE_0__.warning(`\t${ANSI_COLOR_RED}Error processing this branch, stopping further processing${ANSI_COLOR_RESET}`);
 					throw error;
 				}
-
 			}
 
 			// Throttle processing if needed
