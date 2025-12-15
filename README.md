@@ -100,3 +100,9 @@ jobs:
         with:
           skip-unmerged: false
 ```
+
+### Note.
+Distribution file is compiled using ncc.
+```
+ncc build src/index.js -o dist
+```
