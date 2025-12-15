@@ -33,7 +33,7 @@ inputs:
   rate-limit-threshold:
     description: "The action will stop if the remaining GitHub API rate limit falls below this value"
     required: false
-    default: '100''
+    default: '100'
   continue-on-errors:
     description: 'Continue processing other branches if an error occurs'
     required: false
