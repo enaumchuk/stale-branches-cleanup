@@ -32565,11 +32565,11 @@ __nccwpck_require__.r(__webpack_exports__);
 
 
 
-async function isSafeToProceedWithApiCalls(threshold = 100) {
+async function isSafeToProceedWithApiCalls(octokit, threshold = 100) {
 	// Use the built-in octokit client from @actions/github
 	try {
 		// This call itself does not count against your rate limit.
-		const { data } = await _actions_github__WEBPACK_IMPORTED_MODULE_1__.rest.rateLimit.get();
+		const { data } = await octokit.rest.rateLimit.get();
 
 		const coreLimit = data.resources.core;
 
@@ -32583,35 +32583,6 @@ async function isSafeToProceedWithApiCalls(threshold = 100) {
 		// If we can't determine the rate limit, assume it's safe to proceed
 		return true;
 	}
-  }
-
-async function processBranchExclusions(exclusionString) {
-	const branchNames = [];
-	const branchPatternsRegex = [];
-
-	// Split the input string by commas and trim whitespace from each part
-	const exclusions = exclusionString.split(',').map(item => item.trim()).filter(item => item.length > 0);
-
-	for (const item of exclusions) {
-	  // Check if the item contains a wildcard character '*'
-	  if (item.includes('*')) {
-		// It's a pattern/glob
-
-		// Convert the glob pattern into a JavaScript-compatible RegExp object.
-		// 1. Replace the '*' wildcard with '.*' (match any character zero or more times).
-		const regexPattern = new RegExp('^' + item.replace(/\*/g, '.*') + '$');
-		branchPatternsRegex.push(regexPattern);
-
-	  } else {
-		// It's a literal branch name
-		branchNames.push(item);
-	  }
-	}
-
-	return {
-	  branchNames: branchNames,
-	  branchPatternsRegex: branchPatternsRegex
-	};
   }
 
 try {
@@ -32657,6 +32628,35 @@ try {
 	const now = new Date();
 	const staleThreshold = new Date(now.getTime() - staleDays * 24 * 60 * 60 * 1000);
 
+	// Parse branch exclusions
+	_actions_core__WEBPACK_IMPORTED_MODULE_0__.info(`Original skip-branches value: '${skipBranches}'`);
+	const skipBranchNames = [];
+	const skipBranchPatternsRegex = [];
+
+	// Split the input string by commas and trim whitespace from each part
+	const exclusions = skipBranches.split(',').map(item => item.trim()).filter(item => item.length > 0);
+
+	for (const item of exclusions) {
+	  // Check if the item contains a wildcard character '*'
+	  if (item.includes('*')) {
+		// It's a pattern/glob
+
+		// Convert the glob pattern into a JavaScript-compatible RegExp object.
+		// 1. Replace the '*' wildcard with '.*' (match any character zero or more times).
+		const regexPattern = new RegExp('^' + item.replace(/\*/g, '.*') + '$');
+		skipBranchPatternsRegex.push(regexPattern);
+
+	  } else {
+		// It's a literal branch name
+		skipBranchNames.push(item);
+	  }
+	}
+	_actions_core__WEBPACK_IMPORTED_MODULE_0__.info(`Excluded branch names:`);
+	_actions_core__WEBPACK_IMPORTED_MODULE_0__.info(JSON.stringify(skipBranchNames, null, 2));
+	_actions_core__WEBPACK_IMPORTED_MODULE_0__.info(`Excluded branch patterns:`);
+	_actions_core__WEBPACK_IMPORTED_MODULE_0__.info(JSON.stringify(skipBranchPatternsRegex, null, 2));
+	_actions_core__WEBPACK_IMPORTED_MODULE_0__.info('');
+
 	// Get context
 	const context = _actions_github__WEBPACK_IMPORTED_MODULE_1__.context;
 	const octokit = _actions_github__WEBPACK_IMPORTED_MODULE_1__.getOctokit(token);
@@ -32664,14 +32664,6 @@ try {
 	_actions_core__WEBPACK_IMPORTED_MODULE_0__.info(`Stale banch clean-up started`);
 	_actions_core__WEBPACK_IMPORTED_MODULE_0__.info(`Repository: ${context.repo.owner}/${context.repo.repo}`);
 	_actions_core__WEBPACK_IMPORTED_MODULE_0__.info(`Event: ${context.eventName}`);
-
-	// Parse branch exclusions
-	const branchExclusions = processBranchExclusions(skipBranches);
-	_actions_core__WEBPACK_IMPORTED_MODULE_0__.info(`Excluded branch names:`);
-	_actions_core__WEBPACK_IMPORTED_MODULE_0__.info(JSON.stringify(branchExclusions.branchNames, null, 2));
-	_actions_core__WEBPACK_IMPORTED_MODULE_0__.info(`Excluded branch patterns:`);
-	_actions_core__WEBPACK_IMPORTED_MODULE_0__.info(JSON.stringify(branchExclusions.branchPatternsRegex, null, 2));
-	_actions_core__WEBPACK_IMPORTED_MODULE_0__.info('');
 
 	// Analyze repo info
 	const { data: repo } = await octokit.rest.repos.get({
@@ -32691,11 +32683,13 @@ try {
 		_actions_core__WEBPACK_IMPORTED_MODULE_0__.info(`Pulling branches...`);
 
 		// Get all branches
-		const { data: branches } = await octokit.rest.repos.listBranches({
-			owner: context.repo.owner,
-			repo: context.repo.repo,
-			per_page: 100
-		});
+		const { data: branches } = await octokit.paginate(
+			octokit.rest.repos.listBranches,
+			{
+				owner: context.repo.owner,
+				repo: context.repo.repo,
+				per_page: 100
+			});
 
 		_actions_core__WEBPACK_IMPORTED_MODULE_0__.info(`Found ${branches.length} branches`);
 		_actions_core__WEBPACK_IMPORTED_MODULE_0__.info('');
@@ -32704,7 +32698,7 @@ try {
 
 		for (const branch of branches) {
 			// Check API rate limit
-			const canProceed = await isSafeToProceedWithApiCalls(rateLimitThreshold);
+			const canProceed = await isSafeToProceedWithApiCalls(octokit, rateLimitThreshold);
 			if (!canProceed) {
 				_actions_core__WEBPACK_IMPORTED_MODULE_0__.warning(`API rate limit below threshold of ${rateLimitThreshold}. Stopping further processing.`);
 				break;
@@ -32733,11 +32727,11 @@ try {
 			// check if the branch excluded
 			let isExcluded = false;
 			// Check names
-			if (branchExclusions.branchNames.includes(branch.name)) {
+			if (skipBranchNames.includes(branch.name)) {
 				isExcluded = true;
 			} else {
 				// Check patterns
-				for (const pattern of branchExclusions.branchPatternsRegex) {
+				for (const pattern of skipBranchPatternsRegex) {
 					if (pattern.test(branch.name)) {
 						isExcluded = true;
 						break; // Stop checking patterns once a match is found
