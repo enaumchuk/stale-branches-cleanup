@@ -32623,34 +32623,34 @@ try {
 	const ANSI_COLOR_RESET  = '\x1b[0m'; // CRITICAL: Resets color back to default
 
 	// Get inputs
-	const token = _actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput('github_token');
+	const token = _actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput('github-token');
 
-	const staleDays = parseInt(_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput('stale_days'), 10);
+	const staleDays = parseInt(_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput('stale-days'), 10);
 
-	const skipBranches = _actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput('excluded_branches');
-	const skipUmerged = !(_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput('skip_unmerged') === 'false');
-	const skipOpenPRs = !(_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput('skip_open_prs') === 'false');
+	const skipBranches = _actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput('skip-branches');
+	const skipUmerged = !(_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput('skip-unmerged') === 'false');
+	const skipOpenPRs = !(_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput('skip-open-prs') === 'false');
 
-	const maxBranchesToDelete = parseInt(_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput('max_branches_to_delete'), 10);
-	const processThrottleMs = parseInt(_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput('process_throttle_ms'), 10);
-	const rateLimitThreshold = parseInt(_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput('rate_limit_threshold'), 10);
+	const maxBranchesToDelete = parseInt(_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput('max-branches-to-delete'), 10);
+	const processThrottleMs = parseInt(_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput('process-throttle-ms'), 10);
+	const rateLimitThreshold = parseInt(_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput('rate-limit-threshold'), 10);
 
-	const continueOnErrors = _actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput('continue_on_errors') === 'true';
+	const continueOnErrors = _actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput('continue-on-errors') === 'true';
 
-	const dryRun = _actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput('dry_run') === 'true';
+	const dryRun = _actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput('dry-run') === 'true';
 
 	// Validate inputs
 	if (isNaN(staleDays) || staleDays < 0) {
-		throw new Error('Invalid input: stale_days must be a non-negative integer');
+		throw new Error('Invalid input: stale-days must be a non-negative integer');
 	}
 	if (isNaN(maxBranchesToDelete) || maxBranchesToDelete <= 0) {
-		throw new Error('Invalid input: max_branches_to_delete must be a positive integer');
+		throw new Error('Invalid input: max-branches-to-delete must be a positive integer');
 	}
 	if (isNaN(processThrottleMs) || processThrottleMs < 0) {
-		throw new Error('Invalid input: process_throttle_ms must be a non-negative integer');
+		throw new Error('Invalid input: process-throttle-ms must be a non-negative integer');
 	}
 	if (isNaN(rateLimitThreshold) || rateLimitThreshold < 0) {
-		throw new Error('Invalid input: rate_limit_threshold must be a non-negative integer');
+		throw new Error('Invalid input: rate-limit-threshold must be a non-negative integer');
 	}
 
 	// Calculate stale threshold date
