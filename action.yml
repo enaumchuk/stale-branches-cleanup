@@ -1,4 +1,4 @@
-name: 'Branch Cleanup Bot'
+name: 'Branch Clean Up Action'
 description: 'Delete branches with no recent activity'
 author: 'enaumchuk'
 inputs:
