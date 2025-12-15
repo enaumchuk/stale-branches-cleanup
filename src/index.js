@@ -29,6 +29,10 @@ try {
 	const ANSI_COLOR_BLUE   = '\x1b[34m';
 	const ANSI_COLOR_RESET  = '\x1b[0m'; // CRITICAL: Resets color back to default
 
+	// Declare outputs
+	const outputDeletedBranches = [];
+	let deletedCount = 0;
+
 	// Get inputs
 	const token = core.getInput('github-token');
 
@@ -132,8 +136,6 @@ try {
 		core.info(`Found ${branches.length} branches`);
 		core.info('');
 
-		let deletedCount = 0;
-
 		for (const branch of branches) {
 			// Check API rate limit
 			const canProceed = await isSafeToProceedWithApiCalls(octokit, rateLimitThreshold);
@@ -195,7 +197,7 @@ try {
 				// Check if the branch is stale
 				if (commitDate < staleThreshold) {
 
-					core.info(`\t${ANSI_COLOR_RED}Stale${ANSI_COLOR_RESET} - last commit was ${daysSinceCommit} days ago`);
+					core.info(`\t${ANSI_COLOR_RED}Stale branch${ANSI_COLOR_RESET} - the last commit was ${daysSinceCommit} days ago`);
 
 					// Check for unmerged commits
 					if (skipUmerged) {
@@ -206,7 +208,7 @@ try {
 							head: branch.name
 						});
 						if (compare.ahead_by > 0) {
-							core.info(`\t${ANSI_COLOR_YELLOW}Skipping${ANSI_COLOR_RESET} - branch has unmerged commits (${compare.ahead_by} commits ahead of main)`);
+							core.info(`\t${ANSI_COLOR_YELLOW}Skipping${ANSI_COLOR_RESET} - the branch has unmerged commits (${compare.ahead_by} commits ahead of main)`);
 							continue;
 						}
 					}
@@ -220,13 +222,13 @@ try {
 							head: `${context.repo.owner}:${branch.name}`
 						});
 						if (pullRequests.length > 0) {
-							core.info(`\t${ANSI_COLOR_YELLOW}Skipping${ANSI_COLOR_RESET} - branch has ${pullRequests.length} open pull request(s)`);
+							core.info(`\t${ANSI_COLOR_YELLOW}Skipping${ANSI_COLOR_RESET} - the branch has ${pullRequests.length} open pull request(s)`);
 							continue;
 						}
 					}
 
 					if (dryRun) {
-						core.info(`\t${ANSI_COLOR_BLUE}Dry Run${ANSI_COLOR_RESET} - would delete stale branch`);
+						core.info(`\t${ANSI_COLOR_BLUE}Dry Run${ANSI_COLOR_RESET} - would delete this branch when dry-run=false`);
 					} else {
 						await octokit.rest.git.deleteRef({
 							owner: context.repo.owner,
@@ -234,17 +236,18 @@ try {
 							ref: `heads/${branch.name}`
 						});
 						core.info(`\t${ANSI_COLOR_RED}Deleted${ANSI_COLOR_RESET} stale branch`);
+						outputDeletedBranches.push(branch.name);
 						deletedCount++;
 					}
 				} else {
-					core.info(`\t${ANSI_COLOR_GREEN}Active${ANSI_COLOR_RESET} - last commit was ${daysSinceCommit} days ago`);
+					core.info(`\t${ANSI_COLOR_GREEN}Active branch${ANSI_COLOR_RESET} - the last commit was ${daysSinceCommit} days ago`);
 				}
 			} catch (error) {
 				if (continueOnErrors) {
-					core.warning(`\t${ANSI_COLOR_RED}Error processing branch, but continuing due to configuration${ANSI_COLOR_RESET}: ${error.message}`);
+					core.warning(`\t${ANSI_COLOR_RED}Error processing this branch, but continuing due to configuration${ANSI_COLOR_RESET}: ${error.message}`);
 					continue;
 				} else {
-					core.warning(`\t${ANSI_COLOR_RED}Error processing branch, stopping further processing${ANSI_COLOR_RESET}`);
+					core.warning(`\t${ANSI_COLOR_RED}Error processing this branch, stopping further processing${ANSI_COLOR_RESET}`);
 					throw error;
 				}
 
@@ -256,10 +259,17 @@ try {
 				await new Promise(resolve => setTimeout(resolve, processThrottleMs));
 			}
 		}
-		core.info(`Stale branch cleanup complete. Deleted ${deletedCount} branches.`);
+		core.info(`Stale branch cleanup complete.`);
 	} else {
 		core.info(`Event '${context.eventName}' is not supported for stale branch cleanup. Exiting.`);
 	}
+	// Set outputs
+	core.setOutput('deleted-branches', outputDeletedBranches);
+	core.info(`Deleted ${deletedCount} branches.`);
 } catch (error) {
+	if (deletedCount !== undefined) {
+		core.setOutput('deleted-branches', outputDeletedBranches);
+		core.info(`Deleted ${deletedCount} branches.`);
+	}
 	core.setFailed(`Action failed: ${error.message}`);
 }

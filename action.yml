@@ -42,6 +42,12 @@ inputs:
     description: 'Run in dry-run mode without deleting branches'
     required: false
     default: 'false'
+outputs:
+  deleted-branches:
+    description: 'List of deleted branches'
 runs:
   using: 'node20'
   main: 'dist/index.js'
+branding:
+  icon: 'trash-2'
+  color: 'red'

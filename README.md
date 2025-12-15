@@ -57,7 +57,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Stale Branches Cleanup
-        uses: enaumchuk/stale-branches-cleanup@main
+        uses: enaumchuk/stale-branches-cleanup@v1
 ```
 
 ### Dry run
@@ -74,7 +74,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Stale Branches Cleanup
-        uses: enaumchuk/stale-branches-cleanup@main
+        uses: enaumchuk/stale-branches-cleanup@v1
         with:
           dry-run: true
 ```
@@ -96,7 +96,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Stale Branches Cleanup
-        uses: enaumchuk/stale-branches-cleanup@main
+        uses: enaumchuk/stale-branches-cleanup@v1
         with:
           skip-unmerged: false
 ```
