@@ -24,7 +24,7 @@ async function isSafeToProceedWithApiCalls(octokit, threshold = 100) {
 // Define ANSI color codes (for foreground colors)
 const ANSI_COLOR_RED    = '\x1b[31m';
 const ANSI_COLOR_GREEN  = '\x1b[32m';
-const ANSI_COLOR_YELLOW = '\x1b[33m';
+const ANSI_COLOR_YELLOW = '\x1b[93m';
 const ANSI_COLOR_BLUE   = '\x1b[34m';
 const ANSI_COLOR_RESET  = '\x1b[0m'; // CRITICAL: Resets color back to default
 
@@ -41,6 +41,7 @@ try {
 	const skipBranches = core.getInput('skip-branches');
 	const skipUmerged = !(core.getInput('skip-unmerged') === 'false');
 	const skipOpenPRs = !(core.getInput('skip-open-prs') === 'false');
+	const includeClosedPRs = !(core.getInput('include-unmerged-and-closed-prs') === 'false');
 
 	const maxBranchesToDelete = parseInt(core.getInput('max-branches-to-delete'), 10);
 	const processThrottleMs = parseInt(core.getInput('process-throttle-ms'), 10);
@@ -201,20 +202,6 @@ try {
 
 					core.info(`\t${ANSI_COLOR_RED}Stale branch${ANSI_COLOR_RESET} - the last commit was ${daysSinceCommit} days ago`);
 
-					// Check for unmerged commits
-					if (skipUmerged) {
-						const { data: compare } = await octokit.rest.repos.compareCommits({
-							owner: context.repo.owner,
-							repo: context.repo.repo,
-							base: defaultBranch,
-							head: branch.name
-						});
-						if (compare.ahead_by > 0) {
-							core.info(`\t${ANSI_COLOR_YELLOW}Skipping${ANSI_COLOR_RESET} - the branch has unmerged commits (${compare.ahead_by} commits ahead of ${defaultBranch})`);
-							continue;
-						}
-					}
-
 					// Check for open pull requests
 					if (skipOpenPRs) {
 						const { data: pullRequests } = await octokit.rest.pulls.list({
@@ -228,6 +215,48 @@ try {
 							continue;
 						}
 					}
+
+					// Check for unmerged commits
+					if (skipUmerged) {
+						const { data: compare } = await octokit.rest.repos.compareCommits({
+							owner: context.repo.owner,
+							repo: context.repo.repo,
+							base: defaultBranch,
+							head: branch.name
+						});
+						if (compare.ahead_by > 0) {
+							if (includeClosedPRs) {
+								// Check if there are closed PRs for this branch
+								const prs = await octokit.paginate(
+									octokit.rest.pulls.list,
+									{
+										owner: context.repo.owner,
+										repo: context.repo.repo,
+										state: 'all',
+										head: `${context.repo.owner}:${branch.name}`,
+										per_page: 100
+									}
+								  );
+								const hasOpenPRs = prs.some(pr => pr.state === 'open');
+								const hasClosedUnmergedPRs = prs.some(pr => pr.state === 'closed' && !pr.merged_at);
+								if (hasOpenPRs) {
+									core.info(`\t${ANSI_COLOR_YELLOW}Skipping${ANSI_COLOR_RESET} - the branch has unmerged commits (${compare.ahead_by} commits ahead of ${defaultBranch}) and open PRs`);
+									continue;
+								} else if (hasClosedUnmergedPRs) {
+									core.info(`\t${ANSI_COLOR_RED}Including${ANSI_COLOR_RESET} - the branch has unmerged commits (${compare.ahead_by} commits ahead of ${defaultBranch}) but only closed unmerged PRs`);
+								} else {
+									core.info(`\t${ANSI_COLOR_YELLOW}Skipping${ANSI_COLOR_RESET} - the branch has unmerged commits (${compare.ahead_by} commits ahead of ${defaultBranch})`);
+									continue;
+								}
+							} else {
+								// If not including closed PRs, skip the branch
+								core.info(`\t${ANSI_COLOR_YELLOW}Skipping${ANSI_COLOR_RESET} - the branch has unmerged commits (${compare.ahead_by} commits ahead of ${defaultBranch})`);
+								continue;
+							}
+						}
+					}
+
+
 
 					if (dryRun) {
 						core.info(`\t${ANSI_COLOR_BLUE}Dry Run${ANSI_COLOR_RESET} - would delete this branch when dry-run==false`);
