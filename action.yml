@@ -14,8 +14,12 @@ inputs:
     description: 'Skip branches that have unmerged commits'
     required: false
     default: 'true'
+  include-unmerged-and-closed-prs:
+    description: 'Include branches that have unmerged commits but closed PRs'
+    required: false
+    default: 'true'
   skip-open-prs:
-    description: 'Skip branches with open pull requests'
+    description: 'Skip branches with open PRs'
     required: false
     default: 'true'
   skip-branches:

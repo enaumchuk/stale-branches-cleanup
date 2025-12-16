@@ -23,6 +23,7 @@ Inputs are defined in [`action.yml`](action.yml). None are required.
 | `github-token`	| Token used to access GitHub's API. 	| [`${{ github.token }}`] (https://docs.github.com/en/actions/reference/workflows-and-actions/contexts#github-context) |
 | `stale-days`		| Number of days since last commit before a branch is considered stale	| 90 days		|
 | `skip-unmerged`	| Skip branches that have unmerged commits	| true	|
+| `include-unmerged-and-closed-prs`	| This parameter modifies `skip-unmerged`. Include unmerged branches that have no open PRs but only closed unmerged PRs	| true	|
 | `skip-open-prs`	| Skip branches with open pull requests		| true	|
 | `skip-branches`	| Comma-separated list of branches excluded from processing (supports wildcards like release/*)	| 'main,master,develop,development,staging,production,keep-alive-*'	|
 | `max-branches-to-delete`	| Max number of branches to delete in a single run	| 500	|
