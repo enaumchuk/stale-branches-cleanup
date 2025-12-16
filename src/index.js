@@ -282,13 +282,28 @@ try {
 
 					// Check for unmerged commits
 					if (skipUmerged) {
-						const { data: compare } = await octokit.rest.repos.compareCommits({
-							owner: context.repo.owner,
-							repo: context.repo.repo,
-							base: defaultBranch,
-							head: branch.name
-						});
-						if (compare.ahead_by > 0) {
+						let isUnmerged = false;
+						let commitAheadBy = 0;
+						// account for 'no common ancestor' case
+						try {
+							const { data: compare } = await octokit.rest.repos.compareCommits({
+								owner: context.repo.owner,
+								repo: context.repo.repo,
+								base: defaultBranch,
+								head: branch.name
+							});
+							isUnmerged = compare.ahead_by > 0;
+							commitAheadBy = compare.ahead_by;
+						} catch (error) {
+							if (error.message.includes('No common ancestor')) {
+								isUnmerged = true;
+								commitAheadBy = 'unknown (no common ancestor)';
+							} else {
+								throw error;
+							}
+						}
+
+						if (isUnmerged) {
 							if (includeClosedPRs) {
 								// Check if there are closed PRs for this branch
 								const prs = await octokit.paginate(
@@ -304,17 +319,17 @@ try {
 								const hasOpenPRs = prs.some(pr => pr.state === 'open');
 								const hasClosedUnmergedPRs = prs.some(pr => pr.state === 'closed' && !pr.merged_at);
 								if (hasOpenPRs) {
-									core.info(`\t${ANSI_COLOR_YELLOW}Skipping${ANSI_COLOR_RESET} - the branch has unmerged commits (${compare.ahead_by} commits ahead of ${defaultBranch}) and open PRs`);
+									core.info(`\t${ANSI_COLOR_YELLOW}Skipping${ANSI_COLOR_RESET} - the branch has unmerged commits (${commitAheadBy} commits ahead of ${defaultBranch}) and open PRs`);
 									continue;
 								} else if (hasClosedUnmergedPRs) {
-									core.info(`\t${ANSI_COLOR_RED}Including${ANSI_COLOR_RESET} - the branch has unmerged commits (${compare.ahead_by} commits ahead of ${defaultBranch}) but only closed unmerged PRs`);
+									core.info(`\t${ANSI_COLOR_RED}Including${ANSI_COLOR_RESET} - the branch has unmerged commits (${commitAheadBy} commits ahead of ${defaultBranch}) but only closed unmerged PRs`);
 								} else {
-									core.info(`\t${ANSI_COLOR_YELLOW}Skipping${ANSI_COLOR_RESET} - the branch has unmerged commits (${compare.ahead_by} commits ahead of ${defaultBranch})`);
+									core.info(`\t${ANSI_COLOR_YELLOW}Skipping${ANSI_COLOR_RESET} - the branch has unmerged commits (${commitAheadBy} commits ahead of ${defaultBranch})`);
 									continue;
 								}
 							} else {
 								// If not including closed PRs, skip the branch
-								core.info(`\t${ANSI_COLOR_YELLOW}Skipping${ANSI_COLOR_RESET} - the branch has unmerged commits (${compare.ahead_by} commits ahead of ${defaultBranch})`);
+								core.info(`\t${ANSI_COLOR_YELLOW}Skipping${ANSI_COLOR_RESET} - the branch has unmerged commits (${commitAheadByy} commits ahead of ${defaultBranch})`);
 								continue;
 							}
 						}
