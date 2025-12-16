@@ -32562,8 +32562,57 @@ __nccwpck_require__.r(__webpack_exports__);
 /* harmony import */ var _actions_core__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__nccwpck_require__.n(_actions_core__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var _actions_github__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(632);
 /* harmony import */ var _actions_github__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__nccwpck_require__.n(_actions_github__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(9896);
+/* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__nccwpck_require__.n(fs__WEBPACK_IMPORTED_MODULE_2__);
 
 
+
+
+/**
+ * Load cached branch list for today
+ * Returns a Set for fast lookup
+ */
+function loadCachedBranches() {
+  try {
+    if (!fs.existsSync('scanned-branches.json')) return new Set();
+
+    const data = fs.readFileSync('scanned-branches.json', 'utf8');
+    const parsed = JSON.parse(data);
+
+    // Validate structure and date
+    const today = new Date().toISOString().slice(0, 10);
+    if (parsed.date !== today || !Array.isArray(parsed.branches)) {
+      return new Set();
+    }
+
+    return new Set(parsed.branches);
+  } catch (error) {
+	core.warning(`Failed to load scanned-branches.json: ${error.message}`);
+    return new Set();
+  }
+}
+
+/**
+ * Save branch list to scanned-branches.json
+ * Accepts a Set or array of branch names
+ */
+function saveCachedBranches(branchesSetOrArray) {
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const branchesArray = Array.isArray(branchesSetOrArray)
+      ? branchesSetOrArray
+      : [...branchesSetOrArray];
+
+    const state = {
+      date: today,
+      branches: branchesArray,
+    };
+
+    fs__WEBPACK_IMPORTED_MODULE_2___default().writeFileSync('scanned-branches.json', JSON.stringify(state, null, 2));
+  } catch (error) {
+	_actions_core__WEBPACK_IMPORTED_MODULE_0__.warning(`Failed to save scanned-branches.json: ${error.message}`);
+  }
+}
 
 async function isSafeToProceedWithApiCalls(octokit, threshold = 100) {
 	// Use the built-in octokit client from @actions/github
@@ -32595,12 +32644,14 @@ const ANSI_COLOR_RESET  = '\x1b[0m'; // CRITICAL: Resets color back to default
 // Declare outputs
 const outputDeletedBranches = [];
 let deletedCount = 0;
+let scannedBranches = new Set();;
 
 try {
 	// Get inputs
 	const token = _actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput('github-token');
 
 	const staleDays = parseInt(_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput('stale-days'), 10);
+	const scanOncePerDay = !(_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput('scan-once-per-day') === 'false');
 
 	const skipBranches = _actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput('skip-branches');
 	const skipUmerged = !(_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput('skip-unmerged') === 'false');
@@ -32627,6 +32678,13 @@ try {
 	}
 	if (isNaN(rateLimitThreshold) || rateLimitThreshold < 0) {
 		throw new Error('Invalid input: rate-limit-threshold must be a non-negative integer');
+	}
+
+	// load previously scanned branches
+	if (scanOncePerDay) {
+		scannedBranches = loadCachedState();
+		_actions_core__WEBPACK_IMPORTED_MODULE_0__.info(`Loaded ${scannedBranches.size} previously scanned branches`);
+		_actions_core__WEBPACK_IMPORTED_MODULE_0__.info('');
 	}
 
 	// Calculate stale threshold date
@@ -32718,6 +32776,14 @@ try {
 			}
 
 			_actions_core__WEBPACK_IMPORTED_MODULE_0__.info(`${branch.name}`);
+
+			// check if already scanned today
+			if (scanOncePerDay && scannedBranches.has(branch.name)) {
+				_actions_core__WEBPACK_IMPORTED_MODULE_0__.info(`\t${ANSI_COLOR_YELLOW}Skipping${ANSI_COLOR_RESET} - already scanned today`);
+				continue;
+			} else {
+				scannedBranches.add(branch.name);
+			}
 
 			// check if it's default branch
 			if (branch.name === defaultBranch) {
@@ -32820,8 +32886,10 @@ try {
 						}
 					}
 
+					// remove from scanned branches
+					scannedBranches.delete(branch.name);
 
-
+					// Delete the stale branch
 					if (dryRun) {
 						_actions_core__WEBPACK_IMPORTED_MODULE_0__.info(`\t${ANSI_COLOR_BLUE}Dry Run${ANSI_COLOR_RESET} - would delete this branch when dry-run==false`);
 					} else {
@@ -32839,6 +32907,9 @@ try {
 					_actions_core__WEBPACK_IMPORTED_MODULE_0__.info(`\t${ANSI_COLOR_GREEN}Active branch${ANSI_COLOR_RESET} - the last commit was ${daysSinceCommit} days ago`);
 				}
 			} catch (error) {
+				// we'd want to reprocess in case there was API related error
+				scannedBranches.delete(branch.name);
+
 				if (continueOnErrors) {
 					_actions_core__WEBPACK_IMPORTED_MODULE_0__.warning(`\t${ANSI_COLOR_RED}Error processing this branch, but continuing due to configuration${ANSI_COLOR_RESET}: ${error.message}`);
 					continue;
@@ -32861,11 +32932,20 @@ try {
 	// Set outputs
 	_actions_core__WEBPACK_IMPORTED_MODULE_0__.setOutput('deleted-branches', outputDeletedBranches);
 	_actions_core__WEBPACK_IMPORTED_MODULE_0__.info(`Deleted ${deletedCount} branches.`);
+
+	// Save scanned branches
+	saveCachedBranches(scannedBranches);
+	_actions_core__WEBPACK_IMPORTED_MODULE_0__.info(`Saved ${scannedBranches.size} scanned branches for future runs`);
+
 } catch (error) {
 	if (!isNaN(deletedCount)) {
 		_actions_core__WEBPACK_IMPORTED_MODULE_0__.setOutput('deleted-branches', outputDeletedBranches);
 		_actions_core__WEBPACK_IMPORTED_MODULE_0__.info(`Deleted ${deletedCount} branches.`);
 	}
+	// Save scanned branches
+	saveCachedBranches(scannedBranches);
+	_actions_core__WEBPACK_IMPORTED_MODULE_0__.info(`Saved ${scannedBranches.size} scanned branches for future runs`);
+
 	_actions_core__WEBPACK_IMPORTED_MODULE_0__.setFailed(`Action failed: ${error.message}`);
 }
 

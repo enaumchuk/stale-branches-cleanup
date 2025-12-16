@@ -10,6 +10,10 @@ inputs:
     description: 'Number of days since last commit before a branch is considered stale'
     required: false
     default: '90'
+  scan-once-per-day:
+    description: 'Scan each branch only once per day'
+    required: false
+    default: 'true'
   skip-unmerged:
     description: 'Skip branches that have unmerged commits'
     required: false

@@ -22,6 +22,7 @@ Inputs are defined in [`action.yml`](action.yml). None are required.
 |-------------------|---------------------------|---------------|
 | `github-token`	| Token used to access GitHub's API. 	| [`${{ github.token }}`] (https://docs.github.com/en/actions/reference/workflows-and-actions/contexts#github-context) |
 | `stale-days`		| Number of days since last commit before a branch is considered stale	| 90 days		|
+| `scan-once-per-day`	| Cache scanned branches for a day to avoid re-scanning during next workflow run	| true	|
 | `skip-unmerged`	| Skip branches that have unmerged commits	| true	|
 | `include-unmerged-and-closed-prs`	| This parameter modifies `skip-unmerged`. Include unmerged branches that have no open PRs but only closed unmerged PRs	| true	|
 | `skip-open-prs`	| Skip branches with open pull requests		| true	|
@@ -44,7 +45,7 @@ If you have a large number of branches to process, you need to monitor GitHub RE
 
 ### Use defaults
 
-This workflow deletes merged branches that are older than 90 days and not linked to open PRs. Exemptions: the default branch, protected branches, and the default skip-branches list 'main,master,develop,development,staging,production,keep-alive-*'.
+This workflow deletes merged branches that are older than 90 days and not linked to open PRs. Exemptions: the default branch, protected branches, and the default skip-branches list 'main,master,develop,development,staging,production,keep-alive-*'. Scanned branches are stored in GitHub Cache and skipped branches are not rescanned for a day.
 
 ```yaml
 # .github/workflows/stale-branches-cleanup.yml
@@ -57,8 +58,20 @@ jobs:
   stale-branches-cleanup:
     runs-on: ubuntu-latest
     steps:
+      - name: Restore scanned branches cache
+        uses: actions/cache/restore@v4
+        with:
+          path: scanned-branches.json
+          key: scanned-branches-${{ github.run_id }}
+          restore-keys: |
+            scanned-branches-
       - name: Stale Branches Cleanup
         uses: enaumchuk/stale-branches-cleanup@v1
+      - name: Save scanned branches cache
+        uses: actions/cache/save@v4
+        with:
+          path: scanned-branches.json
+          key: scanned-branches-${{ github.run_id }}
 ```
 
 ### Dry run
