@@ -112,7 +112,6 @@ name: Stale Branches Cleanup - Scheduled
 on:
   schedule:
     - cron: '0 3 * * *'
-      timezone: 'America/Chicago'
 
 jobs:
   stale-branches-cleanup:
