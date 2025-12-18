@@ -1,6 +1,6 @@
 {
-	"name": "stale-branches-cleanup",
-	"version": "1.0.0",
+	"name": "action-stale-branches-cleanup",
+	"version": "1.0.5",
 	"description": "GitHub Action tool",
 	"main": "dist/index.js",
 	"scripts": {

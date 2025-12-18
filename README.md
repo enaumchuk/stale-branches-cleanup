@@ -1,6 +1,6 @@
 # GitHub action to clean up stale branches.
 
-This action finds and deletes stale branches.
+This action finds and deletes stale branches. The main difference from similar tools: it watches carefully to hot abuse GitHub API. Most other tools do not watch secondary rate limit issues nor primary rate limit which makes them unusable for repos with large number of branches to cleanup.
 
 A stale branch is defined as a branch that:
 - has its last commit older than `stale-days` (90 days by default)
