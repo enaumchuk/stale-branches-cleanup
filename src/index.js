@@ -13,10 +13,14 @@ function loadCachedBranches() {
     const data = fs.readFileSync('scanned-branches.json', 'utf8');
     const parsed = JSON.parse(data);
 
+	core.info(`Found cached scanned-branches file with date: ${parsed.date}`);
+
     // Validate structure and date
-    const today = new Date().toISOString().slice(0, 10);
+	const now = new Date();
+    const today = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 10);
     if (parsed.date !== today || !Array.isArray(parsed.branches)) {
-      return new Set();
+		core.info(`Cached scanned-branches file is outdated or invalid, ignoring...`);
+      	return new Set();
     }
 
     return new Set(parsed.branches);
@@ -32,7 +36,10 @@ function loadCachedBranches() {
  */
 function saveCachedBranches(branchesSetOrArray) {
   try {
-    const today = new Date().toISOString().slice(0, 10);
+    // Get local date
+	const now = new Date();
+    const today = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 10);
+
     const branchesArray = Array.isArray(branchesSetOrArray)
       ? branchesSetOrArray
       : [...branchesSetOrArray];
@@ -43,6 +50,7 @@ function saveCachedBranches(branchesSetOrArray) {
     };
 
     fs.writeFileSync('scanned-branches.json', JSON.stringify(state, null, 2));
+	core.info(`Cached scanned branches saved with ${today} date`);
   } catch (error) {
 	core.warning(`Failed to save scanned-branches.json: ${error.message}`);
   }
